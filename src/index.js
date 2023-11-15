@@ -69,14 +69,14 @@ app.post('/login', async (req, res) => {
         }
 
        if(password === usuario.password) {
-            res.send('Login bem-sucedido! \n' + usuario);
+            res.status(200).send('Login bem-sucedido! \n' + usuario);
             console.log('Credenciais fornecidas:', email, password);
             console.log('Senha do usuário no banco de dados:', usuario.password);
             
        }
 
        if(password !== usuario.password) {
-        res.status(500).send('Credenciais inválidas')
+        res.status(401).send('Credenciais inválidas')
         console.log('Credenciais fornecidas:', email, password);
         console.log('Senha do usuário no banco de dados:', usuario.password);
         
