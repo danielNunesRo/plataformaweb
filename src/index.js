@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const { promisify } = require('util');
+const jwt = require('jsonwebtoken');
+
 
 
 
@@ -24,12 +26,49 @@ const socioSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
     }
 });
 
 const Socios = mongoose.model('socios', socioSchema);
 
 
+const verificarToken = (req, res, next) => {
+    const token = req.headers.authorization;
+
+    if (!token) {
+        return res.status(401).json({ mensagem: 'Token não fornecido.' });
+    }
+
+    jwt.verify(token, 'seuSegredoDoToken', (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ mensagem: 'Token inválido.' });
+        }
+
+        req.usuario = decoded; // Adiciona informações do usuário ao objeto de solicitação
+        next();
+    });
+};
+
+const verificarPermissaoAdm = (req, res, next) => {
+    const usuario = req.usuario;
+
+    if (usuario && usuario.isAdmin) {
+        // Se o usuário for um administrador, permitir o acesso
+        next();
+    } else {
+        // Se o usuário não for um administrador, negar o acesso
+        res.status(403).json({ mensagem: 'Acesso negado. Você não tem permissões de administrador.' });
+    }
+};
+
+app.get('/socios', verificarToken, verificarPermissaoAdm, async (req, res) => {
+    const socios = await Socios.find();
+    res.send(socios);
+});
 
 app.get('/', async (req, res) => {
     const socios = await Socios.find();
@@ -69,9 +108,9 @@ app.post('/login', async (req, res) => {
         }
 
        if(password === usuario.password) {
-            res.status(200).send('Login bem-sucedido! \n' + usuario);
-            console.log('Credenciais fornecidas:', email, password);
-            console.log('Senha do usuário no banco de dados:', usuario.password);
+        const token = jwt.sign({ email: usuario.email }, 'seuSegredoDoToken', { expiresIn: '1h' });
+
+        res.status(200).json({ token });
             
        }
 
